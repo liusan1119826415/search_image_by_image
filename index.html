@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>图像搜索系统</title>
+  <style>
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      overflow: hidden;
+    }
+    
+    header {
+      background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    h1 { 
+      font-size: 28px; 
+      margin: 0;
+      font-weight: 300;
+    }
+    
+    .upload-section {
+      padding: 30px;
+      text-align: center;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .drop-area {
+      border: 3px dashed #4b6cb7;
+      border-radius: 10px;
+      padding: 40px;
+      text-align: center;
+      transition: all 0.3s ease;
+      background: #f8f9ff;
+      cursor: pointer;
+      margin: 20px auto;
+      max-width: 500px;
+    }
+    
+    .drop-area:hover, .drop-area.dragover {
+      background: #e6eeff;
+      border-color: #182848;
+    }
+    
+    .drop-area p {
+      color: #666;
+      font-size: 16px;
+      margin: 10px 0;
+    }
+    
+    #fileInput {
+      display: none;
+    }
+    
+    .btn {
+      background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      font-size: 16px;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    
+    .btn:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    #preview { 
+      max-width: 300px; 
+      margin: 20px auto;
+      display: block;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .results-section {
+      padding: 30px;
+    }
+    
+    .section-title {
+      color: #182848;
+      border-bottom: 2px solid #4b6cb7;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    
+    #results {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    
+    .result {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      padding: 15px;
+      text-align: center;
+      transition: all 0.3s ease;
+      width: 220px;
+    }
+    
+    .result:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .result img {
+      max-width: 200px;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      display: block;
+      margin: 0 auto 10px;
+    }
+    
+    .similarity-score {
+      font-weight: bold;
+      color: #4b6cb7;
+      font-size: 18px;
+      margin: 10px 0;
+    }
+    
+    .score-details {
+      font-size: 12px;
+      color: #666;
+      margin: 5px 0;
+    }
+    
+    .metric-item {
+      font-size: 14px;
+      color: #666;
+      margin: 5px 0;
+    }
+    
+    .metrics {
+      background: #f8f9ff;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    
+    .metric-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+    }
+    
+    .metric-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #182848;
+    }
+    
+    .metric-label {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 30px;
+      color: #666;
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #4b6cb7;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+      font-size: 14px;
+      border-top: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔍 图像搜索系统</h1>
+    </header>
+    
+    <div class="upload-section">
+      <div class="drop-area" id="dropArea">
+        <p>📁 将图片拖拽到这里</p>
+        <p>或</p>
+        <button class="btn" id="browseBtn">浏览图片</button>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+      
+      <img id="preview" src="" alt="预览图" style="display: none;"/>
+      <br>
+      <button class="btn" id="searchBtn" disabled>开始搜索</button>
+    </div>
+    
+    <div class="results-section">
+      <h2 class="section-title">搜索结果</h2>
+      <div id="results"></div>
+      
+      <h2 class="section-title">性能数据</h2>
+      <div class="metrics" id="metrics"></div>
+    </div>
+    
+    <footer>
+      <p>图像搜索系统 © 2025</p>
+    </footer>
+  </div>
+
+  <script>
+    let selectedBase64 = "";
+    const dropArea = document.getElementById('dropArea');
+    const fileInput = document.getElementById('fileInput');
+    const browseBtn = document.getElementById('browseBtn');
+    const searchBtn = document.getElementById('searchBtn');
+    const preview = document.getElementById('preview');
+
+    // 点击浏览按钮触发文件选择
+    browseBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    // 文件选择后预览并转 base64
+    fileInput.addEventListener("change", function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      handleFile(file);
+    });
+
+    // 拖拽事件处理
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropArea.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight() {
+      dropArea.classList.add('dragover');
+    }
+
+    function unhighlight() {
+      dropArea.classList.remove('dragover');
+    }
+
+    // 处理拖拽放置的文件
+    dropArea.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+      const dt = e.dataTransfer;
+      const file = dt.files[0];
+      if (file && file.type.startsWith('image/')) {
+        handleFile(file);
+      } else {
+        alert('请拖拽有效的图片文件！');
+      }
+    }
+
+    // 处理文件（预览和转换为base64）
+    function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        selectedBase64 = e.target.result;
+        preview.src = selectedBase64;
+        preview.style.display = 'block';
+        searchBtn.disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // 调用 API 搜索
+    async function searchImage() {
+      if (!selectedBase64) {
+        alert("请先选择一张图片！");
+        return;
+      }
+      
+      // 显示加载状态
+      document.getElementById("results").innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>正在搜索中，请稍候...</p>
+        </div>
+      `;
+      document.getElementById("metrics").innerHTML = "";
+
+      try {
+        const response = await fetch("http://127.0.0.1:5000/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: selectedBase64 })
+        });
+
+        const data = await response.json();
+
+        console.log("===data===",data)
+        if (data.error) {
+          document.getElementById("results").innerHTML = `<p style="color: red; text-align: center;">错误: ${data.error}</p>`;
+          return;
+        }
+
+        // 显示结果
+        let html = "";
+        if (data.results && data.results.length > 0) {
+          data.results.forEach(item => {
+            // 安全地处理可能为undefined的属性
+            const score = item.score !== undefined ? (item.score * 100).toFixed(2) : 'N/A';
+            const coarseScore = item.coarse_score !== undefined ? item.coarse_score.toFixed(4) : 'N/A';
+            const fineScore = item.fine_score !== undefined ? item.fine_score.toFixed(4) : 'N/A';
+            
+            html += `
+              <div class="result">
+                <img src="data:image/jpeg;base64,${item.image}" alt="result"/>
+                <div class="similarity-score">精排得分: ${score}%</div>
+                <div class="score-details">粗排得分: ${coarseScore}</div>
+                <div class="score-details">精排得分: ${fineScore}</div>
+              </div>
+            `;
+          });
+        } else {
+          html = '<p style="text-align: center; grid-column: 1 / -1; padding: 30px; color: #666;">未找到匹配的结果</p>';
+        }
+        document.getElementById("results").innerHTML = html;
+
+        // 显示性能指标
+        if (data.metrics) {
+          // 安全地处理可能为undefined的性能指标
+          const featureExtraction = data.metrics.feature_extraction_ms !== undefined ? data.metrics.feature_extraction_ms : 'N/A';
+          const vectorSearch = data.metrics.vector_search_ms !== undefined ? data.metrics.vector_search_ms : 'N/A';
+          const total = data.metrics.total_ms !== undefined ? data.metrics.total_ms : 'N/A';
+          
+          document.getElementById("metrics").innerHTML = `
+            <div class="metric-card">
+              <div class="metric-value">${featureExtraction}</div>
+              <div class="metric-label">特征提取 (ms)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value">${vectorSearch}</div>
+              <div class="metric-label">向量检索 (ms)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value">${total}</div>
+              <div class="metric-label">总耗时 (ms)</div>
+            </div>
+          `;
+        }
+      } catch (err) {
+        document.getElementById("results").innerHTML = `<p style="color: red; text-align: center;">请求失败: ${err.message}</p>`;
+      }
+    }
+
+    // 绑定搜索按钮事件
+    searchBtn.addEventListener('click', searchImage);
+  </script>
+</body>
+</html>
